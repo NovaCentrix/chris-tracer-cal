@@ -18,6 +18,7 @@ def main():
       exit(0)
   tr1 = Tracer(Tracer.TR1)
   tr2 = Tracer(Tracer.TR2)
+  tr = tr1 #TODO put this as argument
 
   
   print('=== Initializing Keithley 195A GPIB Multimeter ===')
@@ -59,7 +60,6 @@ def main():
   print('=== Performing calibration over all counts ===')
   print(dt.datetime.now())
   print('# Began on: ', dt.datetime.now(), file=fpo)
-  tr = tr2
   for count in range(257):
 
     if count == 256:
@@ -69,7 +69,7 @@ def main():
       time.sleep(1.0)
     else: 
       tr.command(Tracer.COUNTS, count)
-      print('# counts:', tr1.counts)
+      print('# counts:', tr.counts)
 
     ohms = []
     for loop in range(10):
