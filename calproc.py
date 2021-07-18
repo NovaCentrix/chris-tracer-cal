@@ -2,6 +2,7 @@
 
 import sys, glob
 from operator import itemgetter
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -39,6 +40,47 @@ class Registers:
     return '{s.rnom:.1f}\t'\
            '{s.regs[0]}\t{s.regs[1]}\t{s.regs[2]}\t{s.regs[3]}\t'\
            '{s.ract:.3f}\t{s.rerr:+.3f}'.format(s=self)
+
+class Inverse:
+  def __init__(self, fname):
+    self.registers=[]
+    self.serno = None
+    self.resno = None
+    self.rbeg = None
+    self.rend = None
+    with open(fname, 'r') as fin:
+      reader = csv.reader(fin, delimiter='\t')
+      npoints=0
+      for row in reader:
+        #print(type(row), len(row), row)
+        if row[0][0] == '#': continue
+        if self.serno is None:
+          self.serno = row[0]
+        elif self.resno is None:
+          self.resno = row[0]
+        elif self.rbeg is None:
+          self.rbeg = row[0]
+        elif self.rend is None:
+          self.rend = row[0]
+        else:
+          rnom = float(row[0])
+          regs=[]
+          regs.append( int(row[1]) )
+          regs.append( int(row[2]) )
+          regs.append( int(row[3]) )
+          regs.append( int(row[4]) )
+          ract = float(row[5])
+          rerr = float(row[6])
+          self.registers.append(Registers(rnom, ract, rerr, regs))
+  def print_all( self, fp=sys.stdout ):
+    print(f'{self.serno}\t# serial number', file=fp)
+    print(f'{self.resno}\t# resistor number', file=fp)
+    print(f'{self.rbeg}\t# minimum resistance value', file=fp)
+    print(f'{self.rend}\t# maximum resistance value', file=fp)
+    print(f'# Rnominal, Registers[1-4], Ractual, Rerror', file=fp)
+    for reg in self.registers:
+      print(reg, file=fp)
+
 
 class Calib:
   def __init__(self, fname):
@@ -78,8 +120,8 @@ class Calib:
     # invert-sn0-r1-regs.dat
     # invert-sn0-r2-regs.dat
     # invert-sn3-r2-regs.dat
-    self.fout =  f'invert-{self.serno.lower()}'\
-                 f'-{self.resno.lower()}.dat'
+    self.fout =  f'data/invert-{self.serno.lower()}'\
+                 f'-{self.resno.lower()}-cal.dat'
     return self.fout
 
   def linear_fit( self ):
@@ -198,6 +240,10 @@ class Calib:
   def print_regs( self, fp=sys.stdout ):
     print(f'# There are {self.nresistances} settings from {self.rbeg} to {self.rend}', file=fp)
     print(f'# plus zero ohms for a grand total of {1+self.nresistances}', file=fp)
+    print(f'{self.serno}\t# serial number', file=fp)
+    print(f'{self.resno}\t# resistor number', file=fp)
+    print(f'{self.rbeg}\t# minimum resistance value', file=fp)
+    print(f'{self.rend}\t# maximum resistance value', file=fp)
     print(f'# Rnominal, Registers[1-4], Ractual, Rerror', file=fp)
     for reg in self.registers:
       print(reg, file=fp)
@@ -243,7 +289,7 @@ class Calib:
     x = [ r.rnom for r in self.registers ]
     y = [ r.rerr for r in self.registers ]
 
-    ax.set_title(f'Registers {self.serno} {self.resno}')
+    ax.set_title(f'Errors for {self.serno} {self.resno}')
     ax.set_xlim(0,300)
     ax.set_ylim(-0.5,+0.5)
     ax.scatter(x,y)
@@ -261,64 +307,78 @@ class Calib:
                   bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 4})
 
 
-def show_help():
-  print('Usage:')
-  print('plotcal [calibration-data-file]')
-  print('Where:')
-  print('  calibration-data-file   data saved by cal.py calibration run')
-
-
 def main( argv ):
 
-  if len(argv) < 2:
-    show_help()
-    exit(0)
+  descr = 'TraceR Module Calibration Data Processing Utility'
+  epilog = 'add more details here'
+  # parse command line args
+  parser = argparse.ArgumentParser(description=descr, epilog=epilog)
+  parser.add_argument('--stats', action='store_true', help='Summarize calibration(s) statistics')
+  parser.add_argument('--invert', action='store_true', help='Calc and save inverse function register values')
+  parser.add_argument('--plotcal', action='store_true', help='Plot cal(s) measured data, Ract vs counts')
+  parser.add_argument('--plotregs', action='store_true', help='Plot inverse(s) register values, countsx4 vs Rnom')
+  parser.add_argument('--ploterrs', action='store_true', help='Plot inverse(s) error values, |Radj-Rnom|')
+  parser.add_argument('--itest', action='store_true', help='Read and print inverse function cal file')
+  parser.add_argument('calfiles', type=argparse.FileType('r'), nargs='*', help='Cal data file(s)')
+  
+  args = parser.parse_args()
+  nfiles = len(args.calfiles)
+  if len(sys.argv)==1 or nfiles==0: # no command line arguments, print help
+    parser.print_help(sys.stderr)
+    sys.exit(0)
+
+  #### print(type(args.calfiles))
+  #### print(args.calfiles)
+  #### for f in args.calfiles:
+  ####   print(f.name, f.mode)
+  #### exit(0)
 
   verbose = False
-  plotme = False
-  plotregs = False
-  ploterrs = True
-  statistics = False
-  invert = True
-  plotsetup = plotme or plotregs or ploterrs
+  plotsetup = args.plotcal or args.plotregs or args.ploterrs
 
-  if statistics:
+  if args.stats:
     print( f'# TraceR calibration summary')
     print( f'# S/N\tR#\tSlope\tOffset\tRmin\tRmax\tNres')
 
   if plotsetup:
-    nfiles = len(sys.argv[1:])
     fig, ax = plt.subplots(nrows=1, ncols=nfiles, 
                   figsize=(6*nfiles,5))
     title = 'TraceR Calibration Data'
     fig.suptitle(title, fontsize=14, fontweight='bold')
     if nfiles == 1: ax = [ax]
 
-  for ifile, fname in enumerate(sys.argv[1:]):
+  for ifile, ftype in enumerate(args.calfiles):
+    fname = ftype.name
 
-    calib = Calib( fname )
-    calib.linear_fit()
-    calib.invert()
+    if args.itest:
+      inverse = Inverse( fname )
+    else:
+      calib = Calib( fname )
+      calib.linear_fit()
+      calib.invert()
 
-    if plotme:
+    if args.plotcal:
       calib.plot_samples( ax[ifile] )
 
-    if plotregs:
+    if args.plotregs:
       calib.plot_registers( ax[ifile] )
 
-    if ploterrs:
+    if args.ploterrs:
       calib.plot_errors( ax[ifile] )
 
-    if invert:
+    if args.invert:
       fout = calib.fname_output()
       print('Writing reg filename:', fout)
       with open( fout, 'w') as fp:
         calib.print_regs(fp)
 
-    if statistics:
+    if args.stats:
       print( f'{calib.serno}\t{calib.resno}\t'\
              f'{calib.slope:.3f}\t{calib.offset:.3f}\t'\
              f'{calib.rbeg}\t{calib.rend}\t{calib.nresistances}')
+
+    if args.itest:
+      inverse.print_all()
 
   if plotsetup:
     #fig.tight_layout()
