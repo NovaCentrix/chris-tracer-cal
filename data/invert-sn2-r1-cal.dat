@@ -1,9 +1,8 @@
-# There are 264 settings from 11 to 274
-# plus zero ohms for a grand total of 265
 SN2	# serial number
 R1	# resistor number
 11	# minimum resistance value
 274	# maximum resistance value
+265	# number of resistances
 # Rnominal, Registers[1-4], Ractual, Rerror
 0.0	0	0	0	0	0.170	+0.170
 11.0	1	1	1	0	11.080	+0.080

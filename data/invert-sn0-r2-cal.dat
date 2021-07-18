@@ -1,9 +1,8 @@
-# There are 257 settings from 14 to 270
-# plus zero ohms for a grand total of 258
 SN0	# serial number
 R2	# resistor number
 14	# minimum resistance value
 270	# maximum resistance value
+258	# number of resistances
 # Rnominal, Registers[1-4], Ractual, Rerror
 0.0	0	0	0	0	0.170	+0.170
 14.0	2	1	1	1	14.060	+0.060
