@@ -40,7 +40,6 @@ class Registers:
            '{s.regs[0]}\t{s.regs[1]}\t{s.regs[2]}\t{s.regs[3]}\t'\
            '{s.ract:.3f}\t{s.rerr:+.3f}'.format(s=self)
 
-
 class Calib:
   def __init__(self, fname):
     self.samples=[]
@@ -79,9 +78,9 @@ class Calib:
     # invert-sn0-r1-regs.dat
     # invert-sn0-r2-regs.dat
     # invert-sn3-r2-regs.dat
-    self.fout =  f'invert-{self.serno.lower()}\t'\
+    self.fout =  f'invert-{self.serno.lower()}'\
                  f'-{self.resno.lower()}.dat'
-    return fout
+    return self.fout
 
   def linear_fit( self ):
     self.x = [ c.counts for c in self.samples[:-1] ]
@@ -93,35 +92,29 @@ class Calib:
     self.slope = self.linfit[0]
     self.offset = self.linfit[1]
     
-  def plot( self ):
-    self.fig,self.ax = plt.subplots(nrows=1, ncols=1, figsize=(6,5))
-    self.fig.suptitle('TraceR Calibration Data '+self.serno, 
-                  fontsize=14, fontweight='bold')
-    
-    self.major_ticks_x = np.arange(0,257,32)
-    self.minor_ticks_x = np.arange(0,257,8)
-    self.major_ticks_y = np.arange(0,301,50)
-    self.minor_ticks_y = np.arange(0,301,10)
+  def plot_samples( self, ax ):
+    major_ticks_x = np.arange(0,257,32)
+    minor_ticks_x = np.arange(0,257,8)
+    major_ticks_y = np.arange(0,301,50)
+    minor_ticks_y = np.arange(0,301,10)
 
-    self.ax.set_title('Digipot ' + self.resno)
-    self.ax.set_xlim(0,256)
-    self.ax.set_ylim(0,300)
-    self.ax.scatter(self.x,self.y)
-    self.ax.plot(self.xfit, self.yfit, c= 'r')
-    self.ax.set_xticks(self.major_ticks_x)
-    self.ax.set_xticks(self.minor_ticks_x, minor=True)
-    self.ax.set_yticks(self.major_ticks_y)
-    self.ax.set_yticks(self.minor_ticks_y, minor=True)
-    self.ax.grid(which='both')
-    self.ax.grid(which='minor', alpha=0.2)
-    self.ax.grid(which='major', alpha=0.5)
-    self.ax.set_xlabel('Digipot Wiper Setting, Counts')
-    self.ax.set_ylabel('Resistance, Ohms')
-    self.ax.text(12,260, ' slope: {:.3f}\noffset: {:.3f}'\
+    ax.set_title(f'Digipot {self.serno} {self.resno}')
+    ax.set_xlim(0,256)
+    ax.set_ylim(0,300)
+    ax.scatter(self.x,self.y)
+    ax.plot(self.xfit, self.yfit, c= 'r')
+    ax.set_xticks(major_ticks_x)
+    ax.set_xticks(minor_ticks_x, minor=True)
+    ax.set_yticks(major_ticks_y)
+    ax.set_yticks(minor_ticks_y, minor=True)
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+    ax.set_xlabel('Digipot Wiper Setting, Counts')
+    ax.set_ylabel('Resistance, Ohms')
+    ax.text(12,260, ' slope: {:.3f}\noffset: {:.3f}'\
                  .format(self.slope, self.offset), 
                   bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 4})
-    self.fig.tight_layout()
-    plt.show()
 
   def invert( self ):
     DELTA = 0.25
@@ -201,12 +194,71 @@ class Calib:
           #print(f'{rnom:.1f}', end='\t')
           #for r in regs: print( f'{r}', end='\t' )
           #print( f'{radj:.3f}', f'{rerr:+.3f}', sep='\t')
-  def print_regs( self ):
-    print(f'# There are {self.nresistances} settings from {self.rbeg} to {self.rend}')
-    print(f'# plus zero ohms for a grand total of {1+self.nresistances}')
-    print(f'# Rnominal, Registers[1-4], Ractual, Rerror')
+
+  def print_regs( self, fp=sys.stdout ):
+    print(f'# There are {self.nresistances} settings from {self.rbeg} to {self.rend}', file=fp)
+    print(f'# plus zero ohms for a grand total of {1+self.nresistances}', file=fp)
+    print(f'# Rnominal, Registers[1-4], Ractual, Rerror', file=fp)
     for reg in self.registers:
-      print(reg)
+      print(reg, file=fp)
+
+  def plot_registers( self, ax ):
+    major_ticks_x = np.arange(0,301,50)
+    minor_ticks_x = np.arange(0,301,10)
+    major_ticks_y = np.arange(0,257,32)
+    minor_ticks_y = np.arange(0,257,8)
+
+    x = [ r.rnom for r in self.registers ]
+    y0 = [ r.regs[0] for r in self.registers ]
+    y1 = [ r.regs[1] for r in self.registers ]
+    y2 = [ r.regs[2] for r in self.registers ]
+    y3 = [ r.regs[3] for r in self.registers ]
+
+    ax.set_title(f'Registers {self.serno} {self.resno}')
+    ax.set_xlim(0,300)
+    ax.set_ylim(0,256)
+    ax.scatter(x,y0)
+    ax.scatter(x,y1)
+    ax.scatter(x,y2)
+    ax.scatter(x,y3)
+    ax.set_xticks(major_ticks_x)
+    ax.set_xticks(minor_ticks_x, minor=True)
+    ax.set_yticks(major_ticks_y)
+    ax.set_yticks(minor_ticks_y, minor=True)
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+    ax.set_xlabel('Nominal Resistance, Ohms')
+    ax.set_ylabel('Digipot Register Settings, Counts')
+    ax.text(12,260, ' slope: {:.3f}\noffset: {:.3f}'\
+                 .format(self.slope, self.offset), 
+                  bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 4})
+
+  def plot_errors( self, ax ):
+    major_ticks_x = np.arange(0,301,50)
+    minor_ticks_x = np.arange(0,301,10)
+    major_ticks_y = np.arange(-0.5,+0.5,0.10)
+    minor_ticks_y = np.arange(-0.5,+0.5,0.05)
+
+    x = [ r.rnom for r in self.registers ]
+    y = [ r.rerr for r in self.registers ]
+
+    ax.set_title(f'Registers {self.serno} {self.resno}')
+    ax.set_xlim(0,300)
+    ax.set_ylim(-0.5,+0.5)
+    ax.scatter(x,y)
+    ax.set_xticks(major_ticks_x)
+    ax.set_xticks(minor_ticks_x, minor=True)
+    ax.set_yticks(major_ticks_y)
+    ax.set_yticks(minor_ticks_y, minor=True)
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+    ax.set_ylabel('Resistance Error, Ohms')
+    ax.set_xlabel('Commanded Resistance, Ohms')
+    ax.text(12,260, ' slope: {:.3f}\noffset: {:.3f}'\
+                 .format(self.slope, self.offset), 
+                  bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 4})
 
 
 def show_help():
@@ -223,33 +275,54 @@ def main( argv ):
     exit(0)
 
   verbose = False
-  plotme = True
+  plotme = False
+  plotregs = False
+  ploterrs = True
   statistics = False
-  invert = False
-
+  invert = True
+  plotsetup = plotme or plotregs or ploterrs
 
   if statistics:
     print( f'# TraceR calibration summary')
     print( f'# S/N\tR#\tSlope\tOffset\tRmin\tRmax\tNres')
 
-  for fname in sys.argv[1:]:
+  if plotsetup:
+    nfiles = len(sys.argv[1:])
+    fig, ax = plt.subplots(nrows=1, ncols=nfiles, 
+                  figsize=(6*nfiles,5))
+    title = 'TraceR Calibration Data'
+    fig.suptitle(title, fontsize=14, fontweight='bold')
+    if nfiles == 1: ax = [ax]
+
+  for ifile, fname in enumerate(sys.argv[1:]):
 
     calib = Calib( fname )
     calib.linear_fit()
     calib.invert()
 
     if plotme:
-      calib.plot()
+      calib.plot_samples( ax[ifile] )
+
+    if plotregs:
+      calib.plot_registers( ax[ifile] )
+
+    if ploterrs:
+      calib.plot_errors( ax[ifile] )
 
     if invert:
-      calib.print_regs()
       fout = calib.fname_output()
-      print('Reg filename:', calib.fout)
+      print('Writing reg filename:', fout)
+      with open( fout, 'w') as fp:
+        calib.print_regs(fp)
 
     if statistics:
       print( f'{calib.serno}\t{calib.resno}\t'\
              f'{calib.slope:.3f}\t{calib.offset:.3f}\t'\
              f'{calib.rbeg}\t{calib.rend}\t{calib.nresistances}')
+
+  if plotsetup:
+    #fig.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
   main(sys.argv)
