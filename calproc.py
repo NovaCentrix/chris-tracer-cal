@@ -79,7 +79,7 @@ def main( argv ):
     if args.stats:
       print( f'{calib.serno}\t{calib.resno}\t'\
              f'{calib.slope:.3f}\t{calib.offset:.3f}\t'\
-             f'{calib.rbeg}\t{calib.rend}\t{calib.nres}')
+             f'{calib.inverse.rbeg}\t{calib.inverse.rend}\t{calib.inverse.nres}')
 
     if args.itest:
       inverse.print_all()

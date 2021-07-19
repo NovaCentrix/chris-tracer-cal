@@ -11,6 +11,7 @@ class Tracer:
   OHMS = 'R'
   ASSIGN = '='
   QUERY = '?'
+  IDENT = 'I'
   END = '\n'
   ser = None
   port = None
@@ -42,9 +43,10 @@ class Tracer:
       print(buff)
       return False
     cls.ser.write(b'\x04')
-    sleep(4.0)
+    sleep(8.0)
     buff = str(cls.ser.read(1024).decode('ascii'))
-    if buff.endswith('soft reboot\r\n\r\n> '):
+    #if buff.endswith('soft reboot\r\n\r\n> '):
+    if buff.endswith('Type "H" for help\r\n\r\n> '):
       print('TraceR Module, soft reboot successful')
     else:
       print('TraceR Module, soft reboot unsuccessful, buff:')
@@ -57,6 +59,7 @@ class Tracer:
     self.counts=0
     self.relay=0
     self.ohms=0
+    self.ident=''
 
   def __repr__(self):
     return f'{self.which}: {self.counts}.{self.relay} = {self.ohms}'
@@ -72,7 +75,7 @@ class Tracer:
       #print('f:', f)
       key,val = f.split('=')
       param=key[0]
-      which=key[1]
+      if len(key) > 1: which=key[1]
       #print('broken:', key, param, which, val)
       #print('which compare:', which, self.which)
       #print('param:', param)
@@ -85,31 +88,41 @@ class Tracer:
         self.relay = val
       elif param == Tracer.OHMS:
         #print('param matched ohms')
-        self.ohms = int(val)
+        self.ohms = float(val)
+      elif param == Tracer.IDENT:
+        self.ident = val
       else:
         #print('param matched nothing')
         pass
 
 
   def command(self, param, value=None):
-    cmd_string = param + self.which
-    if value is None:
-      cmd_string += Tracer.QUERY + Tracer.END
-      self.ser.write( bytes(cmd_count.encode('ascii')) )
+    if param == self.IDENT:
+      cmd_string = param + self.END
     else:
-      cmd_string += Tracer.ASSIGN + str(value) + self.END
-      self.ser.write( bytes(cmd_string.encode('ascii')) )
+      cmd_string = param + self.which
+      if value is None:
+        cmd_string += self.QUERY + self.END
+      else:
+        cmd_string += Tracer.ASSIGN + str(value) + self.END
 
-    # print(cmd_string)
-    reply = str(Tracer.ser.read(1024).decode('ascii'))
-    # print(reply)
+    nwrite = self.ser.write( bytes(cmd_string.encode('ascii')) )
+    #print('command:')
+    #print(cmd_string.strip())
+    #print('end-of-command:')
+    reply = str(Tracer.ser.read(1024).decode('ascii'))[nwrite:]
+    #print('reply:')
+    #print(reply.strip())
+    #print('end-of-reply:')
     self.parse_reply(reply)
 
-def testme():
+def testme(init=False):
   Tracer.init_serial('/dev/ttyACM0')
-  if not Tracer.init_comm_link():
-    print('failed to initialize comm link')
-    exit(0)
+
+  if init:
+    if not Tracer.init_comm_link():
+      print('failed to initialize comm link')
+      exit(0)
   tr1 = Tracer(Tracer.TR1)
   tr2 = Tracer(Tracer.TR2)
   # tr.parse_reply('X1=0\r\nX1=0 K1=open\r\n> ')
