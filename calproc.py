@@ -22,6 +22,7 @@ def main( argv ):
   parser.add_argument('--plotcal', action='store_true', help='Plot cal(s) measured data, Ract vs counts')
   parser.add_argument('--plotregs', action='store_true', help='Plot inverse(s) register values, countsx4 vs Rnom')
   parser.add_argument('--ploterrs', action='store_true', help='Plot inverse(s) error values, |Radj-Rnom|')
+  parser.add_argument('--plotchk', action='store_true', help='Plot check measurements, Rmeas vs Rcmd')
   parser.add_argument('--itest', action='store_true', help='Read and print inverse function cal file')
   parser.add_argument('calfiles', type=argparse.FileType('r'), nargs='*', help='Cal data file(s)')
   
@@ -38,37 +39,64 @@ def main( argv ):
   #### exit(0)
 
   verbose = False
-  plotsetup = args.plotcal or args.plotregs or args.ploterrs
+  plotsetup = args.plotcal or args.plotregs or args.ploterrs or args.plotchk
 
   if args.stats:
     print( f'# TraceR calibration summary')
     print( f'# S/N\tR#\tSlope\tOffset\tRmin\tRmax\tNres')
 
   if plotsetup:
-    fig, ax = plt.subplots(nrows=1, ncols=nfiles, 
-                  figsize=(6*nfiles,5))
+    if nfiles <= 2:
+      nprows = 1
+      npcols = nfiles
+    else:
+      npcols = 2
+      nprows = int(0.5+(nfiles/2))
+    fig, ax = plt.subplots(nrows=nprows, ncols=npcols, 
+                  figsize=(6*npcols,5*nprows))
     title = 'TraceR Calibration Data'
-    fig.suptitle(title, fontsize=14, fontweight='bold')
-    if nfiles == 1: ax = [ax]
+    fig.canvas.manager.set_window_title('tracer-calibration')
+    fig.suptitle(title, fontsize=10, fontweight='bold')
+    if nfiles == 1: ax = [[ax],[]]
+    # print(len(ax))
+    # print('nfiles:', nfiles)
+    # print('nprows:', nprows)
+    # print('npcols:', npcols)
+    # breakpoint()
 
+  iprow=0
+  ipcol=0
   for ifile, ftype in enumerate(args.calfiles):
     fname = ftype.name
 
     if args.itest:
       inverse = Inverse( fname )
+    elif args.plotchk:
+      #this isn't really calibration data
+      # the "counts" of the rcheck file 
+      # contains the commanded resistance value
+      calib = Calib( fname )
     else:
       calib = Calib( fname )
       calib.linear_fit()
       calib.invert()
 
     if args.plotcal:
-      calib.plot_samples( ax[ifile] )
+      calib.plot_samples( ax[iprow][ipcol] )
 
     if args.plotregs:
-      calib.plot_registers( ax[ifile] )
+      calib.plot_registers( ax[iprow][ipcol] )
 
     if args.ploterrs:
-      calib.plot_errors( ax[ifile] )
+      calib.plot_errors( ax[iprow][ipcol] )
+
+    if args.plotchk:
+      calib.plot_check( ax[iprow][ipcol] )
+
+    ipcol += 1
+    if ipcol >= 2:
+      ipcol = 0
+      iprow += 1
 
     if args.invert:
       fout = calib.fname_output()
@@ -85,7 +113,7 @@ def main( argv ):
       inverse.print_all()
 
   if plotsetup:
-    #fig.tight_layout()
+    fig.tight_layout(pad=0.5, w_pad = 0.5, h_pad = 1.0)
     plt.show()
 
 if __name__ == "__main__":

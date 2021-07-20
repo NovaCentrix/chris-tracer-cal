@@ -237,3 +237,39 @@ class Calib:
                   bbox={'facecolor': 'blue', 'alpha': 0.2, 'pad': 4})
 
 
+  def plot_check( self, ax ):
+    major_ticks_x = np.arange(0,301,50)
+    minor_ticks_x = np.arange(0,301,10)
+    major_ticks_y = np.arange(0,301,50)
+    minor_ticks_y = np.arange(0,301,10)
+
+    x = [ c.counts for c in self.samples[:-1] ]
+    y = [ c.ohms   for c in self.samples[:-1] ]
+    y2 = np.subtract(y,x)
+
+
+    ax.set_title(f'Digipot {self.serno} {self.resno}')
+    ax.set_xlim(0,300)
+    ax.set_ylim(0,300)
+    ax.plot(x,y, c='b')
+    ax.set_xticks(major_ticks_x)
+    ax.set_xticks(minor_ticks_x, minor=True)
+    ax.set_yticks(major_ticks_y)
+    ax.set_yticks(minor_ticks_y, minor=True)
+    ax.tick_params(axis='y', labelcolor='b')
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+    ax.set_xlabel('Commanded Resistance, Ohms')
+    ax.set_ylabel('Measured Resistance, Ohms', c='b')
+
+    ax2 = ax.twinx()
+    ax2.tick_params(axis='y', labelcolor='g')
+    ax2.set_ylim(-1.5, 1.5)
+    ax2.set_ylabel('Error, Measured-Commanded, Ohms', c='g')
+    ax2.plot(x,y2, c='g')
+    y3 = [0,0]
+    x3 = [0,300]
+    ax2.plot(x3,y3, 'g', alpha=0.35, linewidth=1)
+
+
