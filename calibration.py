@@ -266,7 +266,7 @@ class Calib:
     ax2 = ax.twinx()
     ax2.tick_params(axis='y', labelcolor='g')
     ax2.set_ylim(-1.5, 1.5)
-    ax2.set_ylabel('Error, Measured-Commanded, Ohms', c='g')
+    ax2.set_ylabel('Difference, Ohms', c='g')
     ax2.plot(x,y2, c='g')
     y3 = [0,0]
     x3 = [0,300]

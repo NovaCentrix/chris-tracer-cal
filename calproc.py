@@ -52,12 +52,28 @@ def main( argv ):
     else:
       npcols = 2
       nprows = int(0.5+(nfiles/2))
-    fig, ax = plt.subplots(nrows=nprows, ncols=npcols, 
-                  figsize=(6*npcols,5*nprows))
+
+    if nprows == 1: 
+      if npcols == 1:
+        vsize = 6
+        hsize = 10
+      else:
+        vsize = 5
+        hsize = 7*npcols
+    else:           
+      vsize = 3*nprows
+      hsize = 6*npcols
+
+
+    fig, ax = plt.subplots(nrows=nprows, ncols=npcols,
+                 figsize=(hsize,vsize))
     title = 'TraceR Calibration Data'
     fig.canvas.manager.set_window_title('tracer-calibration')
-    fig.suptitle(title, fontsize=10, fontweight='bold')
-    if nfiles == 1: ax = [[ax],[]]
+    fig.suptitle(title, fontsize=20, fontweight='bold')
+    if nprows == 1:
+      if nfiles == 1: ax = [ax]
+    else:
+      if nfiles == 1: ax = [[ax],[]]
     # print(len(ax))
     # print('nfiles:', nfiles)
     # print('nprows:', nprows)
@@ -82,16 +98,28 @@ def main( argv ):
       calib.invert()
 
     if args.plotcal:
-      calib.plot_samples( ax[iprow][ipcol] )
+      if nprows==1:
+        calib.plot_samples( ax[ipcol] )
+      else:
+        calib.plot_samples( ax[iprow][ipcol] )
 
     if args.plotregs:
-      calib.plot_registers( ax[iprow][ipcol] )
+      if nprows==1:
+        calib.plot_registers( ax[ipcol] )
+      else:
+        calib.plot_registers( ax[iprow][ipcol] )
 
     if args.ploterrs:
-      calib.plot_errors( ax[iprow][ipcol] )
+      if nprows==1:
+        calib.plot_errors( ax[ipcol] )
+      else:
+        calib.plot_errors( ax[iprow][ipcol] )
 
     if args.plotchk:
-      calib.plot_check( ax[iprow][ipcol] )
+      if nprows==1:
+        calib.plot_check( ax[ipcol] )
+      else:
+        calib.plot_check( ax[iprow][ipcol] )
 
     ipcol += 1
     if ipcol >= 2:
@@ -113,8 +141,10 @@ def main( argv ):
       inverse.print_all()
 
   if plotsetup:
-    fig.tight_layout(pad=0.5, w_pad = 0.5, h_pad = 1.0)
+    fig.tight_layout(pad=1, w_pad = 1, h_pad = 1)
     plt.show()
+    fig.savefig('plot.pdf')
+    fig.savefig('plot.png')
 
 if __name__ == "__main__":
   main(sys.argv)
